@@ -14,7 +14,24 @@ func (rg *RoleGuard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	user, err := lmodel.UserFromContext(r.Context())
 	// TODO
+	if err != nil {
+		htttp.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
+	isAllowed := false
+	for _, role := range rg.allowedRoles {
+		if user.Role == role {
+			isAllowed = true
+			break
+		}
+	}
+
+	if isAllowed {
+		rg.next.ServerHTTP(w, r)
+		return
+	}
+	
 	http.Error(w, "Forbidden", http.StatusForbidden)
 
 }
