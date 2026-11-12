@@ -1,4 +1,4 @@
-package mai
+package main
 
 import (
 	"aaa_bekend/internal/auth"
