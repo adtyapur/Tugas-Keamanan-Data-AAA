@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"aaa_bekend/internal/auth" // Sesuaikan dengan import package auth Anda
+	"aaa_bekend/internal/auth"
 	"aaa_bekend/internal/lmodel"
 	"net/http"
 	"strings"
@@ -32,7 +32,7 @@ func AuthN(next http.Handler) http.Handler {
 			return
 		}
 
-		// Ambil informasi dari claims dan masukkan ke UserContext
+		
 		userCtx := lmodel.UserContext{
 			ID:       claims.UserID,
 			Username: claims.Username,
