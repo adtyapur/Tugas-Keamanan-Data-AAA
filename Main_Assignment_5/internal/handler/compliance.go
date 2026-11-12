@@ -10,7 +10,10 @@ import (
 func GetMyData(w http.ResponseWriter, r *http.Request) {
 	user, _ := lmodel.UserFromContext(r.Context())
 
+	// TODO 1: ambil profil user dari database
 	profile, err := lmodel.GetProfileByUserID(user.ID)
+
+	// TODO 2: handle error
 	if err != nil {
 		http.Error(w, "Gagal mengambil data profil", http.StatusInternalServerError)
 		return
@@ -22,6 +25,7 @@ func GetMyData(w http.ResponseWriter, r *http.Request) {
 func UpdateMyData(w http.ResponseWriter, r *http.Request) {
 	user, _ := lmodel.UserFromContext(r.Context())
 
+	// TODO 1: decode body JSON (username dan email)
 	var req struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
@@ -31,6 +35,7 @@ func UpdateMyData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO 2: update data user di database
 	err := lmodel.UpdateUser(user.ID, req.Username, req.Email)
 	if err != nil {
 		http.Error(w, "Gagal memperbarui data", http.StatusInternalServerError)
@@ -46,7 +51,10 @@ func UpdateMyData(w http.ResponseWriter, r *http.Request) {
 func GetMyAuditLog(w http.ResponseWriter, r *http.Request) {
 	user, _ := lmodel.UserFromContext(r.Context())
 
+	// TODO 1: ambil audit log milik user
 	logs, err := lmodel.GetAuditLogsByUserID(user.ID)
+
+	// TODO 2: handle error
 	if err != nil {
 		http.Error(w, "Gagal mengambil audit log", http.StatusInternalServerError)
 		return
@@ -62,25 +70,28 @@ func GetMyAuditLog(w http.ResponseWriter, r *http.Request) {
 func ExportMyData(w http.ResponseWriter, r *http.Request) {
 	user, _ := lmodel.UserFromContext(r.Context())
 
-	// Memeriksa error secara menyeluruh untuk setiap pengambilan data
+	// TODO 1: ambil profil user
 	profile, err := lmodel.GetProfileByUserID(user.ID)
 	if err != nil {
 		http.Error(w, "Gagal mengambil data profil untuk ekspor", http.StatusInternalServerError)
 		return
 	}
 
+	// TODO 2: ambil project milik user
 	projects, err := lmodel.GetProjectsByUserID(user.ID)
 	if err != nil {
 		http.Error(w, "Gagal mengambil data project untuk ekspor", http.StatusInternalServerError)
 		return
 	}
 
+	// TODO 3: ambil audit log milik user
 	logs, err := lmodel.GetAuditLogsByUserID(user.ID)
 	if err != nil {
 		http.Error(w, "Gagal mengambil audit log untuk ekspor", http.StatusInternalServerError)
 		return
 	}
 
+	// TODO 4: gabungkan semua data jadi satu map ekspor
 	export := map[string]interface{}{
 		"exported_at": time.Now(),
 		"profile":     profile,
@@ -88,9 +99,10 @@ func ExportMyData(w http.ResponseWriter, r *http.Request) {
 		"audit_logs":  logs,
 	}
 
+	// TODO 5: set header download file dan kirim JSON
 	w.Header().Set("Content-Disposition", "attachment; filename=my_data_export.json")
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	if err := json.NewEncoder(w).Encode(export); err != nil {
 		http.Error(w, "Gagal mengenkode data ekspor", http.StatusInternalServerError)
 		return
@@ -100,6 +112,7 @@ func ExportMyData(w http.ResponseWriter, r *http.Request) {
 func DeleteMyAccount(w http.ResponseWriter, r *http.Request) {
 	user, _ := lmodel.UserFromContext(r.Context())
 
+	// TODO 1: hapus akun user beserta semua data terkait
 	err := lmodel.DeleteUserAndRelatedData(user.ID)
 	if err != nil {
 		http.Error(w, "Gagal menghapus akun", http.StatusInternalServerError)
