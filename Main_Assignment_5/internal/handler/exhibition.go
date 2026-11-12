@@ -1,3 +1,4 @@
+
 package handler
 
 import (
@@ -22,52 +23,135 @@ type GradeProjectReq struct {
 }
 
 // POST /api/v1/projects
-
 func SubmitProject(w http.ResponseWriter, r *http.Request) {
 	userCtx, _ := lmodel.UserFromContext(r.Context())
-	// TODO
 
-	// TODO
+	var req SubmitProjectReq
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Title == "" || req.Description == "" {
+		http.Error(w, "Title and description are required", http.StatusBadRequest)
+		return
+	}
+
+	projectID, err := db.CreateProject(
+		r.Context(),
+		req.Title,
+		req.Description,
+		userCtx.ID,
+	)
+	if err != nil {
+		http.Error(w, "Failed to create project", http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]int{"project_id": projectID})
 }
 
 func ListProjects(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	projects, err := db.GetAllProjects(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to fetch projects", http.StatusInternalServerError)
+		return
+	}
 
-	// TODO
+	if projects == nil {
+		projects = []lmodel.Project{}
+	}
 
 	json.NewEncoder(w).Encode(&projects)
 }
+
 func GetAllProjectGrades(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	projects, err := db.GetAllProjectGrades(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to fetch project grades", http.StatusInternalServerError)
+		return
+	}
 
-	// TODO
+	if projects == nil {
+		projects = []lmodel.ProjectGrade{}
+	}
 
 	json.NewEncoder(w).Encode(&projects)
 }
+
 func GradeProject(w http.ResponseWriter, r *http.Request) {
 	userCtx, _ := lmodel.UserFromContext(r.Context())
 
-	//TODO
+	projectID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
 
-	// TODO
+	_, err = db.GetProjectByID(r.Context(), projectID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Failed to fetch project", http.StatusInternalServerError)
+		return
+	}
+
+	var req GradeProjectReq
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Score < 0 || req.Score > 100 {
+		http.Error(w, "Score must be between 0 and 100", http.StatusBadRequest)
+		return
+	}
+
+	err = db.CreateGrade(
+		r.Context(),
+		projectID,
+		userCtx.ID,
+		req.Score,
+		req.Feedback,
+	)
+	if err != nil {
+		http.Error(w, "Failed to submit grade", http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Grade Submitted"})
 }
 
 func GetProjectGrades(w http.ResponseWriter, r *http.Request) {
 	userCtx, _ := lmodel.UserFromContext(r.Context())
-	
-	// TODO 
 
-	// TODO
+	projectID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
 
+	project, err := db.GetProjectByID(r.Context(), projectID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Failed to fetch project", http.StatusInternalServerError)
+		return
+	}
+
+	if userCtx.Role == "student" {
 		if project.StudentID != userCtx.ID {
 			http.Error(w, "Forbidden: you can only view grades for your own projects", http.StatusForbidden)
 			return
 		}
-
 	}
 
 	grades, err := db.GetGradesForProject(r.Context(), projectID)
@@ -79,6 +163,6 @@ func GetProjectGrades(w http.ResponseWriter, r *http.Request) {
 	if grades == nil {
 		grades = []lmodel.Grade{}
 	}
-	json.NewEncoder(w).Encode(grades)
 
+	json.NewEncoder(w).Encode(grades)
 }
