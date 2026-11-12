@@ -10,9 +10,11 @@ import (
 func GetMyData(w http.ResponseWriter, r *http.Request) {
 	user, _ := lmodel.UserFromContext(r.Context())
 
-	//TODO
-
-	//TODO
+	profile, err := lmodel.GetProfileByUserID(user.ID)
+	if err != nil {
+		http.Error(w, "Gagal mengambil data profil", http.StatusInternalServerError)
+		return
+	}
 
 	json.NewEncoder(w).Encode(profile)
 }
@@ -20,9 +22,20 @@ func GetMyData(w http.ResponseWriter, r *http.Request) {
 func UpdateMyData(w http.ResponseWriter, r *http.Request) {
 	user, _ := lmodel.UserFromContext(r.Context())
 
-	// TODO
+	var req struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Payload tidak valid", http.StatusBadRequest)
+		return
+	}
 
-	//TODO
+	err := lmodel.UpdateUser(user.ID, req.Username, req.Email)
+	if err != nil {
+		http.Error(w, "Gagal memperbarui data", http.StatusInternalServerError)
+		return
+	}
 
 	json.NewEncoder(w).Encode(map[string]string{
 		"message":  "Data updated successfully",
@@ -33,9 +46,11 @@ func UpdateMyData(w http.ResponseWriter, r *http.Request) {
 func GetMyAuditLog(w http.ResponseWriter, r *http.Request) {
 	user, _ := lmodel.UserFromContext(r.Context())
 
-	// TODO
-
-	// TODO
+	logs, err := lmodel.GetAuditLogsByUserID(user.ID)
+	if err != nil {
+		http.Error(w, "Gagal mengambil audit log", http.StatusInternalServerError)
+		return
+	}
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"user":  user.Username,
@@ -47,9 +62,24 @@ func GetMyAuditLog(w http.ResponseWriter, r *http.Request) {
 func ExportMyData(w http.ResponseWriter, r *http.Request) {
 	user, _ := lmodel.UserFromContext(r.Context())
 
-	// TODO
+	// Memeriksa error secara menyeluruh untuk setiap pengambilan data
+	profile, err := lmodel.GetProfileByUserID(user.ID)
+	if err != nil {
+		http.Error(w, "Gagal mengambil data profil untuk ekspor", http.StatusInternalServerError)
+		return
+	}
 
-	// TODO
+	projects, err := lmodel.GetProjectsByUserID(user.ID)
+	if err != nil {
+		http.Error(w, "Gagal mengambil data project untuk ekspor", http.StatusInternalServerError)
+		return
+	}
+
+	logs, err := lmodel.GetAuditLogsByUserID(user.ID)
+	if err != nil {
+		http.Error(w, "Gagal mengambil audit log untuk ekspor", http.StatusInternalServerError)
+		return
+	}
 
 	export := map[string]interface{}{
 		"exported_at": time.Now(),
@@ -59,12 +89,22 @@ func ExportMyData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Disposition", "attachment; filename=my_data_export.json")
-	json.NewEncoder(w).Encode(export)
+	w.Header().Set("Content-Type", "application/json")
+	
+	if err := json.NewEncoder(w).Encode(export); err != nil {
+		http.Error(w, "Gagal mengenkode data ekspor", http.StatusInternalServerError)
+		return
+	}
 }
+
 func DeleteMyAccount(w http.ResponseWriter, r *http.Request) {
 	user, _ := lmodel.UserFromContext(r.Context())
 
-	// TODO
+	err := lmodel.DeleteUserAndRelatedData(user.ID)
+	if err != nil {
+		http.Error(w, "Gagal menghapus akun", http.StatusInternalServerError)
+		return
+	}
 
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Your account and all data have been permanently deleted",
